@@ -4,12 +4,13 @@ COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-FROM ghcr.io/ublue-os/bazzite:stable@sha256:9556db65991d57a03a7dc18e4ba28a686d8bcdcd6b61235aa69c8267bb22ff76
+FROM quay.io/fedora/fedora-kinoite:44@sha256:390aefd09d1a9af358759a4d535eac00f1c815b84113d0fffdb1897296f1e165
 ## Other possible base images include:
+# FROM ghcr.io/ublue-os/bazzite:stable
 # FROM ghcr.io/ublue-os/bazzite:testing
 # FROM ghcr.io/ublue-os/aurora:stable
 # FROM ghcr.io/ublue-os/bluefin-nvidia-open:stable
-# 
+#
 # ... and so on, here are more base images
 # Universal Blue Images: https://github.com/orgs/ublue-os/packages
 # Fedora base image: quay.io/fedora/fedora-bootc:44
@@ -23,8 +24,11 @@ FROM ghcr.io/ublue-os/bazzite:stable@sha256:9556db65991d57a03a7dc18e4ba28a686d8b
 ##
 ## Uncomment the following line if one desires to make /opt immutable and be able to be used
 ## by the package manager.
+##
+## Required here: mullvad-vpn installs into "/opt/Mullvad VPN", which rpm cannot
+## create while /opt is a symlink to the not-yet-existing /var/opt.
 
-# RUN rm /opt && mkdir /opt
+RUN rm /opt && mkdir /opt
 
 ### MODIFICATIONS
 ## make modifications desired in your image and install packages by modifying the build.sh script
