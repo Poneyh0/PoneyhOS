@@ -1,0 +1,10 @@
+# Kernel arguments for the NVIDIA open kernel modules.
+#
+# On a bootc system these cannot be set with grubby at build time: the bootloader
+# entry is generated from the image. bootc reads every .toml in this directory and
+# applies the union of their kargs to the deployment.
+kargs = [
+  "rd.driver.blacklist=nouveau",
+  "modprobe.blacklist=nouveau",
+  "nvidia-drm.modeset=1",
+]
