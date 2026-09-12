@@ -4,7 +4,6 @@
 # entry is generated from the image. bootc reads every .toml in this directory and
 # applies the union of their kargs to the deployment.
 kargs = [
-  "rd.driver.blacklist=nouveau",
-  "modprobe.blacklist=nouveau",
-  "nvidia-drm.modeset=1",
+  "rd.driver.blacklist=nouveau,nova-core",
+  "modprobe.blacklist=nouveau,nova-core",
 ]
