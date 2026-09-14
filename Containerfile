@@ -4,7 +4,7 @@ COPY build_files /
 COPY system_files /system_files
 
 # Base Image
-FROM quay.io/fedora/fedora-kinoite:44@sha256:390aefd09d1a9af358759a4d535eac00f1c815b84113d0fffdb1897296f1e165
+FROM quay.io/fedora/fedora-kinoite:44
 ## Other possible base images include:
 # FROM ghcr.io/ublue-os/bazzite:stable
 # FROM ghcr.io/ublue-os/bazzite:testing
