@@ -17,5 +17,14 @@
       "matchDepTypes": ["container"],
       "matchFileNames": [".github/workflows/**.yaml", ".github/workflows/**.yml"],
     },
+    {
+      // The base image tag is followed on purpose: the image is rebuilt daily and
+      // takes whatever fedora-kinoite:44 points to that day. Pinning it to a digest
+      // would freeze the kernel and Plasma until someone merged a bump, and
+      // config:best-practices would otherwise pin it and automerge the result.
+      "enabled": false,
+      "matchUpdateTypes": ["pin", "pinDigest", "digest"],
+      "matchManagers": ["dockerfile"],
+    },
   ]
 }
