@@ -1,2 +1,4 @@
 [default.extend-words]
 cpy = "CPY"
+# Field name emitted by `gpg --with-colons`, not a misspelling of "for".
+fpr = "fpr"
