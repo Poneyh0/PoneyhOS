@@ -24,7 +24,7 @@
       // config:best-practices would otherwise pin it and automerge the result.
       "enabled": false,
       "matchUpdateTypes": ["pin", "pinDigest", "digest"],
-      "matchManagers": ["dockerfile"],
+      "matchPackageNames": ["quay.io/fedora/fedora-kinoite"],
     },
   ]
 }
