@@ -3,3 +3,8 @@ extends: default
 rules:
   new-lines:
     type: unix
+  # The workflows come from ublue-os/image-template, where pinned action SHAs,
+  # `if:` conditions and long comments all exceed 80 columns. Reflowing them
+  # would turn every upstream merge into a conflict, and upstream has no
+  # intention of shortening them.
+  line-length: disable
