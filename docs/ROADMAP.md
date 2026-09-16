@@ -59,49 +59,60 @@ Nothing else can move while the module is not built.
 
 ### N1 — Pin the version, and keep RPMFusion away from the nvidia packages
 
-Status: todo · Effort: `S` · Depends on: —
+Status: done · Effort: `S` · Depends on: —
 
-`build.sh` installs `nvidia-driver` with no version,
-so the build takes whatever is newest that day.
-The repository holds `610.43.02`, `610.57.04` and `615.71.09`:
-a rebuild can change the driver under us without a single line of diff,
-and the day a display bug moves we would not know what moved.
+`build.sh` installs `nvidia-driver` with the following version of nvidia driver:
+`615.71.09`.
+We manually update the driver when nvidia push a new version.
 
-RPMFusion free and nonfree stay enabled for everything else,
-and nothing currently stops dnf from pulling an nvidia userspace from there.
-An `excludepkgs` on both repositories makes the separation a property of the
+RPMFusion free and nonfree stay enabled for everything else.
+An `excludepkgs` on every one of them makes the separation a property of the
 build rather than an ordering accident.
+The pattern matches anything containing `nvidia`:
+a narrower one let `xorg-x11-drv-nvidia` through,
+since its name ends on `nvidia` and carries no trailing separator.
 
 Done when: the version appears in exactly one place in `build.sh`,
-and `rpm -qa 'nvidia*' 'kmod-nvidia*'` on the built image returns only packages
-from the NVIDIA repository, all at that version.
+and every nvidia package on the built image carries it.
+Two legitimate exceptions, confirmed on the image:
+`nvidia-gpu-firmware` comes from Fedora and follows its own dates,
+and `nvidia-driver-selinux` is built from its own source rpm at `0.1`.
+The exclusion itself is proven by querying the repositories rather than reading
+their configuration: `dnf repoquery` against RPMFusion must return nothing for
+`*nvidia*`, with a control package such as `ffmpeg` still resolving, otherwise
+an unsupported glob would make the check pass by selecting no repository at all.
 
 ### N2 — Install the dkms toolchain with its scriptlets
 
-Status: todo · Effort: `XS` · Depends on: —
+Status: done · Effort: `XS` · Depends on: —
 
 `kmod-nvidia-open-dkms` requires `dkms >= 3.1.8`,
 `gcc-c++` and `nvidia-kmod-common`,
-and `--setopt=tsflags=noscripts` applies to the whole transaction,
-not to the package named on the command line.
-As written, those dependencies are installed with their scriptlets skipped too.
+and it arrives as a dependency of `nvidia-driver`.
 
-Install `dkms`, `gcc-c++` and `kernel-devel-${KERNEL_VERSION}` first,
-scriptlets on, then `kmod-nvidia-open-dkms` alone with `noscripts`.
+The `noscripts` approach was dropped:
+the flag applies to a whole transaction rather than to the package named on the
+command line, so it also skipped the scriptlets of every dependency pulled
+alongside.
+What the scriptlet actually had to be stopped from doing is regenerating the
+initramfs, which Fedora's dkms triggers through `dracut --regenerate-all`.
+A `post_transaction=""` override in `/etc/dkms/framework.conf.d` disables
+that hook alone, and is removed once the module is built.
 
-Done when: `dkms status` answers during the build,
-and the `noscripts` transaction installs exactly one package.
+Done when: `dkms build` and `dkms install` run against the kernel of the image
+and the module lands in `/usr/lib/modules/<kver>/extra`.
 
 ### N3 — Build the module with dkms, against the kernel of the image
 
-Status: todo · Effort: `M` · Depends on: `N1`, `N2`
+Status: done · Effort: `M` · Depends on: `N1`, `N2`
 
 The most uncertain point of the whole effort.
 
 The `%post` of the dkms package builds against `uname -r`,
 which inside a container build is the kernel of the build host
 and not the one shipped in the image.
-That is the reason for the `noscripts`, and the reason we drive dkms ourselves.
+That is the reason we drive dkms ourselves rather than letting the scriptlet do
+it.
 The sources land in `/usr/src/nvidia-${NVIDIA_VERSION}`, verified on the rpm.
 
 Plan A: `dkms add` then `dkms autoinstall --kernelver ${KERNEL_VERSION}`.
@@ -115,30 +126,37 @@ Done when: the `find … -name 'nvidia.ko*'` guard passes for the first time.
 
 ### N4 — Derive the version assertion from what is installed
 
-Status: todo · Effort: `S` · Depends on: `N3`
+Status: done · Effort: `S` · Depends on: `N3`
 
-The loop in `build.sh` walks three hardcoded names
-and compares them to a value read from one of those same three,
-so `nvidia-driver` is checked against itself.
-An nvidia package added later slips through entirely.
+Closed as superseded rather than implemented in `build.sh`.
 
-Build the list from what rpm reports as installed,
-and compare it to the pin of `N1`.
-Note the epoch: `nvidia-kmod-common` carries `3:`,
+The original complaint no longer holds: the version is a constant since `N1`,
+so `nvidia-driver` is compared to the pin and not to itself.
+What remained — a list of package names
+that a new nvidia package could slip past —
+is covered by `tests/image-invariants.sh`,
+which builds the list from `rpm -qa` and is run by `just verify`,
+in CI after the rechunk.
+
+The loop in `build.sh` stays as a fast guard on the three packages that matter,
+close to where they are installed.
+Note the epoch for whoever touches either check:
+`nvidia-kmod-common` carries `3:`,
 so `%{VERSION}` is the right field and `%{EVR}` would never match.
 
-Done when: the build fails
-if an nvidia package of another version is deliberately added to it.
+Done when: superseded by `N11`.
 
 ### N5 — A complete green local build
 
-Status: todo · Effort: `S` · Depends on: `N1` to `N4`
+Status: done · Effort: `S` · Depends on: `N1` to `N4`
 
 The consequence of the previous four: `just build` runs to completion,
 `bootc container lint` included.
 
-Done when: a local image exists,
-and `podman run --rm $IMAGE modinfo -F version nvidia` answers `615.71.09`.
+Done when: a local image exists, `bootc container lint` reports no warning,
+and the module answers the pinned version.
+Query it by path, not by name: `modinfo nvidia` resolves against `uname -r`,
+which inside a container is the kernel of the host and not the one in the image.
 
 ## Phase 1 — An image that actually boots
 
@@ -150,8 +168,11 @@ These checks catch the black screen before it happens.
 Status: todo · Effort: `XS` · Depends on: —
 
 The machine boots today with `rd.driver.blacklist=nouveau,nova_core`
-and the matching `modprobe.blacklist`.
-`system_files/usr/lib/bootc/kargs.d/00-nvidia.toml` only names `nouveau`.
+and the matching `modprobe.blacklist`, set locally rather than by the image.
+`system_files/usr/lib/bootc/kargs.d/00-nvidia.toml` now carries both names in
+both lists, and `tests/image-invariants.sh` fails the build if either is
+missing.
+What is left is the proof on a real deployment, which belongs to `N15`.
 
 Nothing breaks today.
 Fedora 44 builds its kernel with `# CONFIG_NOVA_CORE is not set`,
@@ -168,9 +189,9 @@ One word now, or a black screen later on a build that was green.
 Done when: on the deployed image `/proc/cmdline` blacklists both names,
 and `lsmod` shows no `nouveau`.
 
-### N7 — Check the built module against the pinned version
+### N7 — Check the built module against the latest nvidia pinned version
 
-Status: todo · Effort: `XS` · Depends on: `N5`
+Status: done · Effort: `XS` · Depends on: `N5`
 
 The `find` proves a `.ko` was produced, nothing more.
 Add `modinfo -F version nvidia` and compare it to the pin:
@@ -238,11 +259,15 @@ Done when: deliberately breaking an invariant turns the CI red.
 
 Status: todo · Effort: `M` · Depends on: `N1`
 
-The digest of the base image is tracked by Renovate.
 The pin of `N1` is a shell constant, which nothing watches,
 and a pin nobody bumps is a pin that rots.
-A Renovate custom manager on `build.sh`,
-reading the package index of the NVIDIA repository.
+It has to be Renovate, through a `customManager` matching the assignment in
+`build.sh` and reading the package index of the NVIDIA repository.
+Dependabot cannot do it:
+it only understands declared ecosystems such as docker or github-actions,
+and has no mechanism for an arbitrary string in a script.
+The base image is deliberately not part of this: it is followed by tag,
+and `renovate.json5` disables digest pinning for the `Containerfile`.
 
 Done when: a PR opens on its own when NVIDIA publishes a new version.
 
