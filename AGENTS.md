@@ -85,8 +85,15 @@ A cache poisoned before this rule can be cleared with
 
 These are the things that fail silently, or fail far away from their cause.
 
-- The base image is pinned by digest and updated by Renovate.
-  Keep the `@sha256:` when changing the tag.
+- The base image is followed by tag, not pinned by digest.
+  The image is rebuilt daily and takes whatever `fedora-kinoite:44` points to,
+  so the kernel, Plasma and the rest of Fedora can change between two builds
+  with nothing to show for it in the diff.
+  This is deliberate: Renovate is configured not to pin or bump it,
+  and `config:best-practices` would otherwise pin the digest and automerge it.
+  The NVIDIA driver is the opposite,
+  pinned to a single version in [build.sh](./build_files/build.sh):
+  the base moves, the driver does not.
 - `dnf` is present and so is dnf5 so there is no need
 to fall back to `rpm-ostree` in [build.sh](./build_files/build.sh).
 - `/opt` must stay a real directory.
