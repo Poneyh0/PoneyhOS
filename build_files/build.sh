@@ -8,20 +8,42 @@ cp -avf "/ctx/system_files"/. /
 ### Install packages
 
 # Packages can be installed from any enabled yum repo on the image.
-# RPMfusion repos are available by default in ublue main images
-# List of rpmfusion packages can be found here:
-# https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/43/x86_64/repoview/index.html&protocol=https&redirect=1
 
 # this installs a package from fedora repos
-dnf5 install -y tmux
+dnf5 install -y tmux zsh
 
-# Use a COPR Example:
+## RPMFusion (free + nonfree), not present by default on Fedora Atomic images.
+# Package list: https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/44/x86_64/repoview/index.html&protocol=https&redirect=1
 #
-# dnf5 -y copr enable ublue-os/staging
-# dnf5 -y install package
-# Disable COPRs so they don't end up enabled on the final image:
-# dnf5 -y copr disable ublue-os/staging
+# The rpm is downloaded to /tmp rather than handed to dnf as a URL: dnf would
+# keep it in the /var/cache cache mount, and the next local build fails on it
+# with a misleading `not a rpm`.
+for repo in free nonfree; do
+	curl --fail --silent --show-error --location \
+		--output "/tmp/rpmfusion-${repo}-release.rpm" \
+		"https://mirrors.rpmfusion.org/${repo}/fedora/rpmfusion-${repo}-release-$(rpm -E %fedora).noarch.rpm"
+done
+dnf5 install -y /tmp/rpmfusion-free-release.rpm /tmp/rpmfusion-nonfree-release.rpm
+
+## NVIDIA driver
+/ctx/nvidia.sh
+
+## Copr
+
+dnf5 -y copr enable wezfurlong/wezterm-nightly
+dnf5 -y install wezterm
+dnf5 -y copr disable wezfurlong/wezterm-nightly
+
+dnf5 -y copr enable quadratech188/vicinae
+dnf5 -y install vicinae
+dnf5 -y copr disable quadratech188/vicinae
 
 #### Example for enabling a System Unit File
 
 systemctl enable podman.socket
+
+### Cleanup
+
+# /run is a tmpfs on the deployed system and /var is not image content on a
+# bootc system: what dnf leaves there is flagged by `bootc container lint`.
+rm -rf /run/dnf /run/selinux-policy /var/lib/dnf
