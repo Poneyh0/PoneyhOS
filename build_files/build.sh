@@ -8,9 +8,11 @@ cp -avf "/ctx/system_files"/. /
 ### Install packages
 
 # Packages can be installed from any enabled yum repo on the image.
+# Mullvad VPN
+dnf config-manager addrepo --from-repofile=https://repository.mullvad.net/rpm/stable/mullvad.repo
 
 # this installs a package from fedora repos
-dnf5 install -y tmux zsh
+dnf5 install -y tmux zsh mullvad-vpn
 
 ## RPMFusion (free + nonfree), not present by default on Fedora Atomic images.
 # Package list: https://mirrors.rpmfusion.org/mirrorlist?path=free/fedora/updates/44/x86_64/repoview/index.html&protocol=https&redirect=1
