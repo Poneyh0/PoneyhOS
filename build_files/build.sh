@@ -38,6 +38,10 @@ dnf5 -y copr enable quadratech188/vicinae
 dnf5 -y install vicinae
 dnf5 -y copr disable quadratech188/vicinae
 
+dnf5 -y copr enable atim/starship
+dnf5 -y install starship
+dnf5 -y copr disable atim/starship
+
 #### Example for enabling a System Unit File
 
 systemctl enable podman.socket
