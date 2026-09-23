@@ -47,7 +47,7 @@ dnf5 -y copr disable atim/starship
 #### Example for enabling a System Unit File
 
 systemctl enable podman.socket
-systemctl --user enable vicinae.service
+systemctl --global enable vicinae.service
 
 ### Cleanup
 
